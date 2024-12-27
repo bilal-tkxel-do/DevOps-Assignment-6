@@ -1,10 +1,13 @@
 pipeline {
-    agent any
+    agent {
+        label 'docker'
+    }
     environment {
-        GITHUB_REPO = 'https://github.com/bilal-tkxel-do/DevOps-Assignment-4.git' 
+        GITHUB_REPO = 'https://github.com/bilal-tkxel-do/DevOps-Assignment-6.git' 
         CREDENTIALS_ID = 'github-token'  
         DEPLOY_ENV = 'production'       
-        DOCKER_IMAGE = 'test-app:latest'                 
+        DOCKERHUB_REPO = "bilaltkxel/hotel-app"
+        DOCKERHUB_CREDENTIALS = "DOCKERHUB_CREDENTIALS"
     }
   
     stages {
@@ -16,36 +19,52 @@ pipeline {
             }
         }
 
-	stage('Code Analysis') {
-	    agent {
-                label 'docker'  
-            }
-
-            environment {
-                scannerHome = tool name: 'sonar'
-            }
-            steps {
-                script {
-                    withSonarQubeEnv('sonar') {
-                        sh """
-                            ${scannerHome}/bin/sonar-scanner \
-                                -Dsonar.projectKey=devops-assignment-6 \
-                                -Dsonar.projectName=devops-assignment-6 \
-                                -Dsonar.sources=.
-                        """
+    	stage('Code Analysis') {
+                environment {
+                    scannerHome = tool name: 'sonar'
+                }
+                steps {
+                    script {
+                        withSonarQubeEnv('sonar') {
+                            sh """
+                                ${scannerHome}/bin/sonar-scanner \
+                                    -Dsonar.projectKey=devops-assignment-6 \
+                                    -Dsonar.projectName=devops-assignment-6 \
+                                    -Dsonar.sources=.
+                            """
+                        }
                     }
                 }
             }
+    	
+    	stage('Build Docker Image') {
+                steps {
+                    script {
+                        dockerImage = docker.build DOCKERHUB_REPO + ":$BUILD_NUMBER"
+                        }
+                }
+            }
+    
+        stage('Deploy our image') {
+                steps{
+                    script {
+                        docker.withRegistry( '', DOCKERHUB_CREDENTIALS ) {
+                        dockerImage.push()
+                        }
+                    }
+                }
+            }    
+       }
+    
+    post {
+        always {
+            echo 'This message will always be displayed, regardless of the build result.'
         }
-	
-	stage('Build Docker Image') {
-	    agent {
-                label 'docker'
-            }
-
-            steps {
-                sh 'docker build -t ${DOCKER_IMAGE} .'
-            }
+        success {
+            echo 'Build succeeded!'
+        }
+        failure {
+            echo 'Build failed!'
         }
     }
 }

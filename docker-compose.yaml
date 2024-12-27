@@ -29,6 +29,7 @@ services:
       - JENKINS_SECRET=bf294aa2d8efacb0fd977d981676e71fa6b8b6cb580c5659628a38235c02b896
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+      - /usr/bin/docker:/usr/bin/docker
       - jenkins_agent_workspace:/home/jenkins-agent
     user: root
 
